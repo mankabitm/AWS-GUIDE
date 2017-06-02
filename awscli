@@ -1,0 +1,50 @@
+Step 0: pip install awscli
+	My Security Credentials -> Create New Access Key -> Download it and use it
+
+Step 1: Configure the AWS CLI
+
+aws configure
+
+
+Step 2: Create a Security Group, Key Pair, and Role for the EC2 Instance 
+
+aws ec2 create-security-group --group-name devenv-sg --description "security group for development environment in EC2"
+aws ec2 authorize-security-group-ingress --group-name devenv-sg --protocol tcp --port 22 --cidr 0.0.0.0/0
+aws ec2 create-key-pair --key-name devenv-key --query 'KeyMaterial' --output text > devenv-key.pem
+chmod 400 devenv-key.pem
+
+
+Step 3: Launch and Connect to the Instance
+
+aws ec2 run-instances --image-id ami-6f68cf0f --security-group-ids sg-216f405a --count 1 --instance-type t2.micro --key-name devenv-key --query 'Instances[0].InstanceId'
+aws ec2 describe-instances --instance-ids i-0be3148f2d8d4b1e6 --query 'Reservations[0].Instances[0].PublicIpAddress'
+ssh -i devenv-key.pem ec2-user@35.165.130.65
+sudo -i
+
+-------------------------------------------------------------------------------------
+
+Creation of Load Balancer (Classic)
+
+aws elb create-load-balancer --load-balancer-name my-load-balancer --listeners "Protocol=HTTP,LoadBalancerPort=80,InstanceProtocol=HTTP,InstancePort=80" --availability-zones us-west-2a us-west-2a
+
+--------------------------------------------------------------------------------------
+
+Creation of volume
+
+aws ec2 create-volume --size 10 --region us-west-2 --availability-zone us-west-2a --volume-type gp2
+
+--------------------------------------------------------------------------------------
+
+Creation of snaphot of volume
+
+aws ec2 create-snapshot --volume-id vol-0967ba9cc21462b59 --description "This is my root volume snapshot."
+
+--------------------------------------------------------------------------------------
+
+To attach a volume to an instance
+
+aws ec2 attach-volume --volume-id vol-05ebb0a64c2d3beed --instance-id i-0be3148f2d8d4b1e6 --device /dev/sdf
+
+--------------------------------------------------------------------------------------
+
+
