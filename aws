@@ -1,0 +1,179 @@
+***************   AWS CONFIGURE   ***********************
+aws configure
+AWS Access Key ID [None]: AKIAIOSFODNN7EXAMPLE
+AWS Secret Access Key [None]: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+Default region name [None]: us-west-2
+Default output format [None]: json
+
+
+
+To create a security group, key pair, and role
+=========================================================================
+$ aws ec2 create-security-group --group-name devenv-sg --description "security group for development environment in EC2"
+{
+    "GroupId": "sg-b018ced5"
+}
+$ aws ec2 authorize-security-group-ingress --group-name devenv-sg --protocol tcp --port 22 --cidr 0.0.0.0/0
+
+===============================================================================
+
+
+
+Next, create a key pair, which allows you to connect to the instance. 
+======================================================================
+ aws ec2 create-key-pair --key-name devenv-key --query 'KeyMaterial' --output text > devenv-key.pem
+chmod 400 devenv-key.pem
+===========================================================================================
+
+
+
+To launch and connect to the instance
+================================================================================
+aws ec2 run-instances --image-id ami-6f68cf0f --security-group-ids sg-1ea58865 --count 1 --instance-type t2.micro --key-name devenv-key --query 'Instances[0].InstanceId'
+i-01725464c0602f8a2
+============================================================================================
+
+TO OBTAIN IP ADDRESS OF INSTANCE
+==============================================
+aws ec2 describe-instances --instance-ids i-01725464c0602f8a2 --query 'Reservations[0].Instances[0].PublicIpAddress'
+54.202.223.126
+
+===============================================
+ssh -i mylalabhi.pem ec2-user@54.202.158.111
+===================================================================
+
+TO LAUNCH A VOLUME
+=====================================================================================
+aws ec2 create-volume --size 80 --region us-east-1 --availability-zone us-east-1a --volume-type gp2
+
+
+===============================================================================
+To create a snapshot
+=========================
+aws ec2 create-snapshot --volume-id vol-04304eb6b2fa00687 --description "This is my root volume snapshot."
+
+=====================================================================================
+To create a new Provisioned IOPS (SSD) volume from a snapshot
+====================================================================
+aws ec2 create-volume --region us-east-1 --availability-zone us-east-1a --snapshot-id snap-066877671789bd71b --volume-type io1 --iops 1000
+=======================================================================================
+
+TO ATTATCH A VOLUME TO AN INSTANCE
+==============================================
+aws ec2 attach-volume --volume-id vol-0cd5f66ee5e094d2d --instance-id  i-03dff31eae80393d7 --device /dev/sdf
+
+======================================================================================
+
+TO MAKE A SNAPSHOT OF AN AMI
+=========================================
+aws ec2 create-image --instance-id i-03dff31eae80393d7 --name "snap-ami" --description "An AMI for my server
+======================================================================================
+
+DESCRIBING SECURITY GROUPS
+====================================
+aws ec2 describe-security-groups --group-names MySecurityGroup
+========================================================================================
+
+TO ADD MORE SERVERS TO THE CREATED INSTANCE
+===================================================
+
+To add a rule that allows inbound SSH traffic
+---->>>>aws ec2 authorize-security-group-ingress --group-name MySecurityGroup --protocol tcp --port 22 --cidr 203.0.113.0/24
+
+
+To add a rule that allows inbound HTTP traffic from a security group in another account
+----->>>>>>aws ec2 authorize-security-group-ingress --group-name MySecurityGroup --protocol tcp --port 80
+===========================================================================================
+
+TO DESCRIBE INSTANCE STATUS
+=======================================
+aws ec2 describe-instance-status
+aws ec2 describe-instance-status --instance-ids i-1234567890abcdef0
+============================================================================================
+
+To add/remove an Availability Zone using the AWS CLI
+=================================================
+aws elb enable-availability-zones-for-load-balancer --load-balancer-name my-loadbalancer --availability-zones us-west-2b
+aws elb disable-availability-zones-for-load-balancer --load-balancer-name my-loadbalancer --availability-zones us-west-2a
+=============================================================================================
+
+
+
+To register/deregister your instances using the AWS CLI
+=========================================================
+aws elb register-instances-with-load-balancer --load-balancer-name my-loadbalancer --instances i-4e05f721
+aws elb deregister-instances-from-load-balancer --load-balancer-name my-loadbalancer --instances i-4e05f721
+============================================================================================
+
+
+command to configure the load balancer with the two listeners:
+=======================================================
+aws elb create-load-balancer --load-balancer-name my-load-balancer --listeners "Protocol=http,LoadBalancerPort=80,InstanceProtocol=http,InstancePort=80" "Protocol=https,LoadBalancerPort=443,InstanceProtocol=http,InstancePort=80,SSLCertificateId="ARN" --availability-zones us-west-2a
+============================================================================================
+
+
+ command to view the details of your load balancer:
+=====================================================================
+aws elb describe-load-balancers --load-balancer-name my-load-balancer
+=============================================================================================
+
+
+
+To configure the health checks for your instances
+===================================================
+aws elb configure-health-check --load-balancer-name my-loadbalancer --health-check Target=HTTP:80/ping,Interval=30,UnhealthyThreshold=2,HealthyThreshold=2,Timeout=3
+=============================================================================================
+
+
+Register EC2 Instances
+==========================================================================
+aws elb register-instances-with-load-balancer --load-balancer-name my-loadbalancer --instances i-4f8cf126 i-0bb7ca62
+=============================================================================================
+
+To check the state of your newly registered EC2 instances
+==========================================================================
+aws elb describe-instance-health  --load-balancer-name my-loadbalancer --instances i-4f8cf126 i-0bb7ca62
+=============================================================================================
+
+
+Delete Your Load Balancer
+===================================================================
+aws elb delete-load-balancer --load-balancer-name my-loadbalancer
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+By default, your Classic Load Balancer distributes incoming requests evenly across its enabled Availability Zones. For example, if you have ten instances in Availability Zone us-west-2a and two instances in us-west-2b, the requests are distributed evenly between the two Availability Zones. As a result, the two instances in us-west-2b serve the same amount of traffic as the ten instances in us-west-2a. To ensure that your load balancer distributes incoming requests evenly across all instances in its enabled Availability Zones, enable cross-zone load balancing.
+
+Cross-zone load balancing reduces the need to maintain equivalent numbers of instances in each enabled Availability Zone, and improves your application's ability to handle the loss of one or more instances. However, we still recommend that you maintain approximately equivalent numbers of instances in each enabled Availability Zone for higher fault tolerance
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+HOW TO MOUNT S3 ON YOUR OWN LINUX
+=====================================
+
+  526  yum install automake fuse fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel
+  527  git clone https://github.com/s3fs-fuse/s3fs-fuse.git
+  528  cd s3fs-fuse
+  529  ./
+  530  pwd
+  531  ./autogen.sh 
+  532  ./configure 
+  533  make
+  534  make install
+  535  chmod 400 /root/Downloads/rootkey.csv 
+  536  mkdir /media/abhisj
+  537  s3fs abhisj /media/abhisj
+  538  s3fs abhisj /media/abhisj -o passwd_file=/root/Downloads/rootkey.csv 
+  539  df -h
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+ami-4836a428  ->  Amazon Linux AMI 2017.03.0 (HVM), SSD Volume Type
+ami-6f68cf0f  ->  Red Hat Enterprise Linux 7.3 (HVM), SSD Volume Type
+ami-efd0428f  ->  Ubuntu Server 16.04 LTS (HVM), SSD Volume Type
+
+elb---- instance ids, classical
+s3----- bucket name
+
+
